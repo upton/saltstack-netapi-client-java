@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -29,10 +30,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Type;
+import java.lang.reflect.ParameterizedType;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Parser for Saltstack responses.
@@ -75,6 +78,7 @@ public class JsonParser<T> {
                 .registerTypeAdapter(Date.class, new DateAdapter().nullSafe())
                 .registerTypeAdapter(Stats.class, new StatsDeserializer())
                 .registerTypeAdapter(Arguments.class, new ArgumentsDeserializer())
+                .registerTypeAdapterFactory(new OptionalTypeAdapterFactory())
                 .create();
     }
 
@@ -111,6 +115,45 @@ public class JsonParser<T> {
                 throw new JsonParseException(e);
             }
         }
+    }
+
+    /**
+     * TypeAdaptorFactory creating TypeAdapters for Optional
+     */
+    private class OptionalTypeAdapterFactory implements TypeAdapterFactory {
+
+        @SuppressWarnings("unchecked")
+        public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> typeToken) {
+            Type type = typeToken.getType();
+            boolean isOptional = typeToken.getRawType() == Optional.class;
+            boolean isParameterized = type instanceof ParameterizedType;
+            if (isOptional && isParameterized) {
+                Type elementType = ((ParameterizedType) type).getActualTypeArguments()[0];
+                TypeAdapter<?> elementAdapter = gson.getAdapter(TypeToken.get(elementType));
+                return (TypeAdapter<T>) optionalAdapter(elementAdapter);
+            } else {
+                return null;
+            }
+        }
+
+        private <A> TypeAdapter<Optional<A>> optionalAdapter(TypeAdapter<A> innerAdapter) {
+            return new TypeAdapter<Optional<A>>() {
+                public Optional<A> read(JsonReader in) throws IOException {
+                    if (in.peek() == JsonToken.NULL) {
+                        in.nextNull();
+                        return Optional.empty();
+                    } else {
+                        A value = innerAdapter.read(in);
+                        return Optional.of(value);
+                    }
+                }
+
+                public void write(JsonWriter out, Optional<A> optional) throws IOException {
+                    innerAdapter.write(out, optional.orElse(null));
+                }
+            };
+        }
+
     }
 
     /**
