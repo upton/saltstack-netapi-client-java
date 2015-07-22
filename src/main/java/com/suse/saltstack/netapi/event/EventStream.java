@@ -87,17 +87,8 @@ public class EventStream implements AutoCloseable {
      * Upon exit from this method, all subscribed listeners will be removed.
      */
     public void close() {
-        synchronized (listeners) {
-            // notify all the listeners and cleanup
-            for (EventListener listener : listeners) {
-                listener.eventStreamClosed();
-            }
-            // clear out the listeners
-            listeners.clear();
-
-            if (!isEventStreamClosed())  {
-                socket.close();
-            }
+        if (!isEventStreamClosed()) {
+            socket.close();
         }
     }
 
@@ -137,7 +128,7 @@ public class EventStream implements AutoCloseable {
 
         socket = client.create();
 
-        socket.on(new Function<String>() {
+        socket.on(Event.MESSAGE, new Function<String>() {
             @Override
             public void on(String s) {
                 synchronized (listeners) {
@@ -146,12 +137,25 @@ public class EventStream implements AutoCloseable {
                     }
                 }
             }
+        }).on(Event.CLOSE, new Function<String>() {
+            @Override
+            public void on(String s) {
+                synchronized (listeners) {
+                    for (EventListener listener : listeners) {
+                        listener.eventStreamClosed();
+                    }
+                }
+            }
+        }).on(Event.HEADERS, new Function<String>() {
+            @Override
+            public void on(String s) {
+                System.out.println("HEader: " + s);
+            }
         });
 
         try {
             socket.open(request.build());
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             close();
         }
 
