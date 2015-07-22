@@ -62,10 +62,31 @@ public class WasyncServerSentEventsTest {
 
         try (EventStream serverSentEvents =
                 new EventStream(client.getConfig())) {
-            SimpleEventCountListenerClient eventCountClient = new SimpleEventCountListenerClient(6);
+            EventCountListenerClient eventCountClient = new EventCountListenerClient(6);
             serverSentEvents.addEventListener(eventCountClient);
 
             eventCountClient.await();
+        }
+    }
+
+    /**
+     * Tests: stream event content
+     */
+    @Test
+    public void testEventMessageContent() {
+        stubFor(get(urlEqualTo("/events"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "text/event-stream")
+                        .withHeader("Connection", "keep-alive")
+                        .withBody(TEXT_EVENT_STREAM_RESPONSE)));
+
+        try (EventStream serverSentEvents =
+                     new EventStream(client.getConfig())) {
+            EventCountListenerClient eventClient = new EventCountListenerClient(6);
+            serverSentEvents.addEventListener(eventClient);
+            eventClient.await();
+
+            Assert.assertTrue(eventClient.getEvents().get(2).contains("\"jid\": \"20150505113307407682\""));
         }
     }
 
@@ -89,56 +110,45 @@ public class WasyncServerSentEventsTest {
     }
 
     /**
-     * Event listener client used for testing.
+     * Event listener client used for testing that an event is fired N times
      */
-    private class SimpleEventCountListenerClient extends SimpleEventListenerClient {
+    private class EventCountListenerClient extends SimpleEventListenerClient {
 
-        private static final int TIMEOUT = 5;
+        protected static final int TIMEOUT = 5;
 
-        private CountDownLatch latch;
+        protected CountDownLatch latch;
         private int targetCount;
         private int counter = 0;
 
-        public SimpleEventCountListenerClient(int targetCount) {
+        public EventCountListenerClient(int targetCount) {
             this.targetCount = targetCount;
-            this.latch = new CountDownLatch(targetCount);
+            this.latch = new CountDownLatch(1);
         }
 
         @Override
         public void notify(String event) {
-            this.events.add(event);
-            latch.countDown();
             counter++;
+            System.out.print("*********" + event);
+
+            this.events.add(event);
+
         }
 
         @Override
         public void eventStreamClosed() {
-            Assert.assertEquals(targetCount, counter);
+            latch.countDown();
+            //Assert.assertEquals(targetCount, counter);
         }
 
         public void await() {
             try {
                 latch.await(TIMEOUT, TimeUnit.SECONDS);
+                System.out.print(counter);
                 Assert.assertEquals(targetCount, counter);
             }
             catch (InterruptedException e) {
                 Assert.fail("Timeout waiting for " + targetCount + " events");
             }
-        }
-    }
-
-    /**
-     * Event listener client used for testing.
-     */
-    private class EventContentClient extends SimpleEventListenerClient {
-        @Override
-        public void notify(String event) {
-            events.add(event);
-        }
-
-        @Override
-        public void eventStreamClosed() {
-            Assert.assertTrue(events.get(2).contains("\"jid\": \"20150505113307407682\""));
         }
     }
 
