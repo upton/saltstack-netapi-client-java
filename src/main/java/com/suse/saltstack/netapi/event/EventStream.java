@@ -168,11 +168,6 @@ public class EventStream implements AutoCloseable {
                     }
                 }
             }
-        }).on(Event.HEADERS, new Function<String>() {
-            @Override
-            public void on(String s) {
-                System.out.println("HEader: " + s);
-            }
         });
 
         try {
