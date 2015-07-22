@@ -1,5 +1,9 @@
 package com.suse.saltstack.netapi.event;
 
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClientConfig;
+import com.ning.http.client.ProxyServer;
+import com.ning.http.util.StringUtils;
 import com.suse.saltstack.netapi.config.ClientConfig;
 import org.atmosphere.wasync.Client;
 import org.atmosphere.wasync.ClientFactory;
@@ -7,9 +11,11 @@ import org.atmosphere.wasync.Decoder;
 import org.atmosphere.wasync.Encoder;
 import org.atmosphere.wasync.Event;
 import org.atmosphere.wasync.Function;
+import org.atmosphere.wasync.OptionsBuilder;
 import org.atmosphere.wasync.Request;
 import org.atmosphere.wasync.RequestBuilder;
 import org.atmosphere.wasync.Socket;
+import org.atmosphere.wasync.impl.DefaultOptionsBuilder;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -107,7 +113,23 @@ public class EventStream implements AutoCloseable {
      */
     private void initializeStream() {
 
+        AsyncHttpClientConfig.Builder httpConfigBuilder = new AsyncHttpClientConfig.Builder();
+        String proxyHost = config.get(ClientConfig.PROXY_HOSTNAME);
+        if (proxyHost != null && !proxyHost.isEmpty()) {
+
+            ProxyServer proxyConfig = new ProxyServer(
+                    proxyHost,
+                    config.get(ClientConfig.PROXY_PORT),
+                    config.get(ClientConfig.PROXY_USERNAME),
+                    config.get(ClientConfig.PROXY_PASSWORD)
+            );
+            httpConfigBuilder.setProxyServer(proxyConfig);
+        }
+        AsyncHttpClient ahClient = new AsyncHttpClient(httpConfigBuilder.build());
         Client client = ClientFactory.getDefault().newClient();
+        OptionsBuilder optionsBuilder = client.newOptionsBuilder();
+        optionsBuilder.runtime(ahClient);
+
         request = client.newRequestBuilder()
                 .method(Request.METHOD.GET)
                 .uri(config.get(ClientConfig.URL) + "/events")
@@ -126,7 +148,7 @@ public class EventStream implements AutoCloseable {
                 .transport(Request.TRANSPORT.SSE)
                 .header("X-Auth-Token", config.get(ClientConfig.TOKEN));
 
-        socket = client.create();
+        socket = client.create(optionsBuilder.build());
 
         socket.on(Event.MESSAGE, new Function<String>() {
             @Override
