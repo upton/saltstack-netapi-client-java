@@ -69,11 +69,29 @@ public class WasyncServerSentEventsTest {
         }
     }
 
+    /**
+     * Event listener client used for testing.
+     */
+    private class EventClientBase implements EventListener {
+
+       protected List<String> events = new ArrayList<String>();
+
+        // return all received events
+        public List<String> getEvents() {
+            return events;
+        }
+
+        @Override
+        public void notify(String event) {}
+
+        @Override
+        public void eventStreamClosed() {}
+    }
 
     /**
      * Event listener client used for testing.
      */
-    private class EventCountClient implements EventListener {
+    private class EventCountClient extends EventClientBase {
 
         private static final int TIMEOUT = 5;
 
@@ -81,16 +99,9 @@ public class WasyncServerSentEventsTest {
         private int targetCount;
         private int counter = 0;
 
-        private List<String> events = new ArrayList<String>();
-
         public EventCountClient(int targetCount) {
             this.targetCount = targetCount;
             this.latch = new CountDownLatch(targetCount);
-        }
-
-        // return all received events
-        public List<String> getEvents() {
-            return events;
         }
 
         @Override
@@ -119,9 +130,7 @@ public class WasyncServerSentEventsTest {
     /**
      * Event listener client used for testing.
      */
-    private class EventContentClient implements EventListener {
-        List<String> events = new ArrayList<>();
-
+    private class EventContentClient extends EventClientBase {
         @Override
         public void notify(String event) {
             events.add(event);
