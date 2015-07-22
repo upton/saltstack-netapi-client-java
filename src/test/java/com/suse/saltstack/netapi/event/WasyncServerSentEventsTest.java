@@ -130,7 +130,7 @@ public class WasyncServerSentEventsTest {
     /**
      * Event listener client used for testing.
      */
-    private class SimpleEventContentListenerClient extends SimpleEventListenerClient {
+    private class EventContentClient extends SimpleEventListenerClient {
         @Override
         public void notify(String event) {
             events.add(event);
