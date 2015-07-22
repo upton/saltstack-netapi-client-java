@@ -106,7 +106,8 @@ public class EventStream implements AutoCloseable {
      * @return Whether the stream is closed.
      */
     public boolean isEventStreamClosed() {
-        return socket.status() == Socket.STATUS.CLOSE || socket.status() == Socket.STATUS.ERROR;
+        return socket.status() == Socket.STATUS.CLOSE ||
+                socket.status() == Socket.STATUS.ERROR;
     }
 
     /**
