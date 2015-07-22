@@ -62,7 +62,7 @@ public class WasyncServerSentEventsTest {
 
         try (EventStream serverSentEvents =
                 new EventStream(client.getConfig())) {
-            EventCountClient eventCountClient = new EventCountClient(6);
+            SimpleEventCountListenerClient eventCountClient = new SimpleEventCountListenerClient(6);
             serverSentEvents.addEventListener(eventCountClient);
 
             eventCountClient.await();
@@ -72,7 +72,7 @@ public class WasyncServerSentEventsTest {
     /**
      * Event listener client used for testing.
      */
-    private class EventClientBase implements EventListener {
+    private class SimpleEventListenerClient implements EventListener {
 
        protected List<String> events = new ArrayList<String>();
 
@@ -91,7 +91,7 @@ public class WasyncServerSentEventsTest {
     /**
      * Event listener client used for testing.
      */
-    private class EventCountClient extends EventClientBase {
+    private class SimpleEventCountListenerClient extends SimpleEventListenerClient {
 
         private static final int TIMEOUT = 5;
 
@@ -99,7 +99,7 @@ public class WasyncServerSentEventsTest {
         private int targetCount;
         private int counter = 0;
 
-        public EventCountClient(int targetCount) {
+        public SimpleEventCountListenerClient(int targetCount) {
             this.targetCount = targetCount;
             this.latch = new CountDownLatch(targetCount);
         }
@@ -130,7 +130,7 @@ public class WasyncServerSentEventsTest {
     /**
      * Event listener client used for testing.
      */
-    private class EventContentClient extends EventClientBase {
+    private class SimpleEventContentListenerClient extends SimpleEventListenerClient {
         @Override
         public void notify(String event) {
             events.add(event);
@@ -140,17 +140,6 @@ public class WasyncServerSentEventsTest {
         public void eventStreamClosed() {
             Assert.assertTrue(events.get(2).contains("\"jid\": \"20150505113307407682\""));
         }
-    }
-
-    /**
-     * Simple Event ListenerClient
-     */
-    private class SimpleEventListenerClient implements EventListener {
-        @Override
-        public void notify(String event) { }
-
-        @Override
-        public void eventStreamClosed() { }
     }
 
     /**
