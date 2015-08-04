@@ -51,6 +51,8 @@ public class JsonParser<T> {
             new JsonParser<>(new TypeToken<Result<List<Map<String, Job>>>>(){});
     public static final JsonParser<Result<List<Map<String, Object>>>> RETVALS =
             new JsonParser<>(new TypeToken<Result<List<Map<String, Object>>>>(){});
+    public static final JsonParser<Result<List<Map<String, Map<String, String>>>>> RETVALS_ALL =
+            new JsonParser<>(new TypeToken<Result<List<Map<String, Map<String, String>>>>>(){});
     public static final JsonParser<Result<List<Map<String, Map<String, Object>>>>> RETMAPS =
             new JsonParser<>(
             new TypeToken<Result<List<Map<String, Map<String, Object>>>>>(){});

@@ -137,6 +137,9 @@ public class SaltStackClient {
         // For whatever reason they return a list of tokens here, take the first
         Token token = result.getResult().get(0);
         config.put(ClientConfig.TOKEN, token.getToken());
+        
+        // add the Token object to config
+        config.put(ClientConfig.TK, token);
         return token;
     }
 
@@ -347,12 +350,46 @@ public class SaltStackClient {
      * @throws SaltStackException if anything goes wrong
      */
     public Map<String, Object> getJobResult(final String job) throws SaltStackException {
-        Result<List<Map<String, Object>>> result = connectionFactory
-                .create("/jobs/" + job, JsonParser.RETVALS, config)
-                .getResult();
-
-        // A list with one element is returned, we take the first
-        return result.getResult().get(0);
+        return getJobResult(null, null, null, null, job);
+    }
+    
+    /**
+     * Query for the result of a supplied job.
+     * <p>
+     * {@code GET /job/<job-id>}
+     *
+     * @param job String representing scheduled job
+     * @return Map key: minion id, value: command result from that minion
+     * @throws SaltStackException if anything goes wrong
+     */
+    public Map<String, Object> getJobResult(final String username, final String password, final AuthModule eauth, final String client, final String job) throws SaltStackException {
+        if(username != null || password != null || eauth != null || client != null){
+            Map<String, String> props = new LinkedHashMap<String, String>() {
+                {
+                    if(username!= null)  put("username", username);
+                    if(password != null) put("password", password);
+                    if(eauth != null)    put("eauth", eauth.getValue());
+                    if(client != null)   put("client", client);
+                }
+            };
+            
+            JsonArray jsonArray = new JsonArray();
+            jsonArray.add(ClientUtils.makeJsonData(props, null, null));
+            
+            Result<List<Map<String, Object>>> result = connectionFactory
+                    .create("/jobs/" + job, JsonParser.RETVALS, config)
+                    .getResult(jsonArray.toString());
+            
+            // A list with one element is returned, we take the first
+            return result.getResult().get(0);
+        } else {
+            Result<List<Map<String, Object>>> result = connectionFactory
+                    .create("/jobs/" + job, JsonParser.RETVALS, config)
+                    .getResult();
+            
+            // A list with one element is returned, we take the first
+            return result.getResult().get(0);
+        }
     }
 
     /**
@@ -408,9 +445,10 @@ public class SaltStackClient {
             throws SaltStackException {
         Map<String, String> props = new LinkedHashMap<String, String>() {
             {
-                put("username", username);
-                put("password", password);
-                put("eauth", eauth.getValue());
+                if(username!= null)  put("username", username);
+                if(password != null) put("password", password);
+                if(eauth != null)    put("eauth", eauth.getValue());
+                
                 put("client", client);
                 put("tgt", target);
                 put("fun", function);
@@ -427,7 +465,7 @@ public class SaltStackClient {
         // A list with one element is returned, we take the first
         return result.getResult().get(0);
     }
-
+    
     /**
      * Asynchronously start any execution command bypassing normal session handling.
      * <p>
@@ -451,6 +489,45 @@ public class SaltStackClient {
             @Override
             public Map<String, Object> call() throws Exception {
                 return run(username, password, eauth, client, target, function, args, kwargs);
+            }
+        });
+    }
+    
+   public Map<String, Map<String, String>> runAll(final String username, final String password,
+           final AuthModule eauth, final String client, final String target,
+           final String function, List<String> args, Map<String, String> kwargs)
+           throws SaltStackException {
+       Map<String, String> props = new LinkedHashMap<String, String>() {
+           {
+               if(username!= null)  put("username", username);
+               if(password != null) put("password", password);
+               if(eauth != null)    put("eauth", eauth.getValue());
+               
+               put("client", client);
+               put("tgt", target);
+               put("fun", function);
+           }
+       };
+
+       JsonArray jsonArray = new JsonArray();
+       jsonArray.add(ClientUtils.makeJsonData(props, kwargs, args));
+
+       Result<List<Map<String, Map<String, String>>>> result = connectionFactory
+               .create("/run", JsonParser.RETVALS_ALL, config)
+               .getResult(jsonArray.toString());
+
+       // A list with one element is returned, we take the first
+       return result.getResult().get(0);
+   }
+
+   public Future<Map<String, Map<String, String>>> runAllAsync(final String username,
+            final String password, final AuthModule eauth, final String client,
+            final String target, final String function, final List<String> args,
+            final Map<String, String> kwargs) {
+        return executor.submit(new Callable<Map<String, Map<String, String>>>() {
+            @Override
+            public Map<String, Map<String, String>> call() throws Exception {
+                return runAll(username, password, eauth, client, target, function, args, kwargs);
             }
         });
     }

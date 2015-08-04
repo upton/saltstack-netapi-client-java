@@ -4,6 +4,8 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.suse.saltstack.netapi.datatypes.Token;
+
 /**
  * A statically typed key/value store for the Saltstack client configuration.
  */
@@ -11,6 +13,7 @@ public class ClientConfig {
 
     public static final Key<URI> URL = new Key<>(URI.create("http://localhost:8000"));
     public static final Key<String> TOKEN = new Key<>();
+    public static final Key<Token> TK = new Key<>();
 
     /**
      * Timeout in milliseconds until a connection is established.
@@ -18,7 +21,7 @@ public class ClientConfig {
      * A negative value is interpreted as undefined (system default).
      * Default value is 10000ms (10s)
      */
-    public static final Key<Integer> CONNECT_TIMEOUT = new Key<>(10000);
+    public static final Key<Integer> CONNECT_TIMEOUT = new Key<>(60 * 000);
 
     /**
      * Timeout in milliseconds for waiting for data.
@@ -26,7 +29,7 @@ public class ClientConfig {
      * A negative value is interpreted as undefined (system default).
      * Default value is 10000ms (10s)
      */
-    public static final Key<Integer> SOCKET_TIMEOUT = new Key<>(10000);
+    public static final Key<Integer> SOCKET_TIMEOUT = new Key<>(60 * 000);
 
     // Proxy settings
     public static final Key<String> PROXY_HOSTNAME = new Key<>();
